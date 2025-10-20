@@ -1,0 +1,41 @@
+#!/bin/bash
+
+projects_folder=${FP_PROJECTS_FOLDER:-"$HOME/Projects"}
+ide_window_name=${FP_VIM_WINDOW_NAME:-"IDE"}
+shell_window_name=${FP_SHELL_WINDOW_NAME:-"Shell"}
+session_file=${FP_SESSION_FILE:-"session"}
+
+run() {
+  selected=$(ls -1 "$projects_folder" | fzf)
+  selected="${selected// /_}"
+
+  if [ "$selected" = "" ]; then
+    exit 0
+  fi
+
+  project="$projects_folder/$selected"
+
+  session_name=$selected
+  
+  active_session=$(zellij ls 2>&1 | grep $session_name)
+
+  cd $project
+
+  if [ "$active_session" = "" ]; then
+    echo "Creating session $session_name"
+    zellij -n ide -s $session_name
+  else
+    zellij a $session_name
+  fi
+
+}
+
+tabExists() {
+  key=$1
+
+  result=$(kitten @ ls -m=var:$key 2> /dev/null)
+
+  [ "$result" == "" ] && echo "false" || echo "true"
+}
+
+run
