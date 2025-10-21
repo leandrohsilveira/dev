@@ -5,6 +5,9 @@ arch=amd64
 arch_bits=x86_64
 arch_bits_compact=x64
 
+# NeoVim
+neovim_config_repo=git@github.com:leandrohsilveira/nvim-config.git
+
 # Font
 font_filename=FiraCode
 font_namespace=${font_filename}NerdFont
@@ -21,6 +24,7 @@ fonts_folder="$HOME/fonts"
 scripts_folder="$HOME/dev/scripts"
 bin_folder="$HOME/.local/bin"
 installed_fonts_folder=$HOME/.local/share/fonts
+neovim_config_folder=$HOME/.config/nvim
 
 # Packages versions
 lua_version=5.1.5
@@ -285,6 +289,29 @@ if [ "$neovim_install" != "" ]; then
 
   ln -sf "$apps_folder/$neovim_filename/bin/nvim" "$bin_folder/nvim"
   rm -Rf $downloads_folder/$neovim_file
+  neovim_config_reset="true"
+fi
+
+if [ ! -d $neovim_config_folder ]; then
+  neovim_config_clone="true"
+  echo "No NeoVim config detected, cloning repo $neovim_config_repo into $neovim_config_folder"
+else
+  neovim_config_repo_current=$(cd $neovim_config_folder && git remote show origin | grep "Fetch URL:" | sed "s|  Fetch URL: ||")
+  echo "NeoVim config already exists. [current=$neovim_config_repo_current; target=$neovim_config_repo]"
+  if [ "$neovim_config_repo_current" != "$neovim_config_repo" ]; then
+    echo "NeoVim repo mismatch, replacing configuration..."
+    neovim_config_clone="true"
+  fi
+fi
+
+if [ "$neovim_config_clone" != "" ]; then
+  rm -Rf $neovim_config_folder
+  git clone $neovim_config_repo $neovim_config_folder
+  neovim_config_reset="true"
+fi
+
+if [ "$neovim_config_reset" = "true" ]; then
+  echo "Reseting NeoVim configuration state..."
   ./scripts/nvimreset
 fi
 
@@ -329,5 +356,5 @@ if [ "$nerdfont_install" != "" ]; then
   rm -Rf $downloads_folder/$nerdfont_file
 fi
 
-mkdir $bin_folder/dev_scripts
+mkdir -p $bin_folder/dev_scripts
 ln -sf $scripts_folder $bin_folder/dev_scripts/bin
