@@ -59,7 +59,7 @@ check_installation() {
     echo "RipGrep is already installed. [current=$current_version; target=$version]"
     if [ "$version" != "$current_version" ]; then
       echo "RipGrep version mismatch, replacing installation..."
-      rm -rf $tools_folder/ripgrep
+      rm -rf $tools_folder/$ripgrep_filename
       install
     fi
   fi
