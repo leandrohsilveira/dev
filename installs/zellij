@@ -9,7 +9,7 @@ init() {
 
   source ./utils/globals
 
-  zellij_platform=$(./utils/env select_platform $platform unknown-linux-musl darwin)
+  zellij_platform=$(./utils/env select_platform $platform unknown-linux-musl apple-darwin)
   zellij_arch=$(./utils/env select_arch $arch x86_64 aarch64)
   zellij_filename=zellij-no-web-${zellij_arch}-${zellij_platform}
   zellij_file=$zellij_filename.tar.gz
