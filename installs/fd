@@ -1,0 +1,85 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  platform=$(./utils/assert requiredArg second "platform (linux or mac)" $2)
+  arch=$(./utils/assert requiredArg third "arch (amd64 or arm64)" $3)
+
+  source ./utils/globals
+
+  fd_platform=$(./utils/env select_platform $platform unknown-linux-gnu apple-darwin)
+  fd_arch=$(./utils/env select_arch $arch x86_64 aarch64)
+  fd_filename=fd-v${version}-${fd_arch}-${fd_platform}
+  fd_file=$fd_filename.tar.gz
+  fd_url=https://github.com/sharkdp/fd/releases/download/v$version/$fd_file
+  fd_bin=$(./utils/bin find fd)
+
+  # initializing directories
+  downloads_folder=$ds_downloads_folder
+  tools_folder=$ds_tools_folder
+  bin_folder=$ds_bin_folder
+
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Tools folder variable is required" $tools_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $downloads_folder
+  mkdir -p $tools_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking F.D. (Find Directory) installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing F.D. (Find Directory) binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$fd_bin" = "" ]; then
+    echo "F.D. (Find Directory) is not installed, installing..."
+    install
+  else
+    current_version=$(fd --version | sed "s|fd ||")
+    echo "F.D. (Find Directory) is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "F.D. (Find Directory) version mismatch, replacing installation..."
+      rm -rf $tools_folder/$fd_filename
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$fd_file
+  echo "Downloading F.D. (Find Directory) from $fd_url"
+  curl -L --output $downloads_folder/$fd_file $fd_url
+
+  mkdir -p $tools_folder
+  tar -xzf $downloads_folder/$fd_file -C $tools_folder
+
+  create_symlinks
+
+  rm -Rf $downloads_folder/$fd_file
+}
+
+create_symlinks() {
+  ./utils/symlink create "$tools_folder/$fd_filename/fd" "$bin_folder/fd"
+}
+
+"$@"
