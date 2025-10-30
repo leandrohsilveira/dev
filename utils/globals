@@ -1,0 +1,10 @@
+#!/bin/bash
+
+declare -g ds_sources_folder=${DEVSETUP_SOURCE_FOLDER:-"$HOME/sources"}
+declare -g ds_downloads_folder=${DEVSETUP_DOWNLODAS_FOLDER:-"$HOME/Downloads/devsetup"}
+declare -g ds_tools_folder=${DEVSETUP_DOWNLOADS_FOLDER:-"$HOME/tools"}
+declare -g ds_apps_folder=${DEVSETUP_DOWNLOADS_FOLDER:-"$HOME/apps"}
+declare -g ds_bin_folder=$HOME/.local/bin
+declare -g ds_fonts_folder="$HOME/fonts"
+declare -g ds_installed_fonts_folder=$HOME/.local/share/fonts
+declare -g ds_scripts_folder="$(pwd)/scripts"

@@ -1,0 +1,88 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  platform=$(./utils/assert requiredArg second "platform (linux or mac)" $2)
+  arch=$(./utils/assert requiredArg third "arch (amd64 or arm64)" $3)
+
+  source ./utils/globals
+
+  nodejs_platform=$(./utils/env select_platform $platform linux darwin)
+  nodejs_arch=$(./utils/env select_arch $arch x64 arm64)
+  nodejs_filename=node-${version}-${nodejs_platform}-${nodejs_arch}
+  nodejs_file=$nodejs_filename.tar.xz
+  nodejs_url=https://nodejs.org/dist/$version/$nodejs_file
+
+  # initializing directories
+  sources_folder=$ds_sources_folder
+  downloads_folder=$ds_downloads_folder
+  tools_folder=$ds_tools_folder
+  bin_folder=$ds_bin_folder
+  nodejs_bin=$(./utils/bin find node)
+
+  ./utils/assert notEmpty "Sources folder variable is required" $sources_folder
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Tools folder variable is required" $tools_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $sources_folder
+  mkdir -p $downloads_folder
+  mkdir -p $tools_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking NodeJS installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing NodeJS binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$nodejs_bin" = "" ]; then
+    echo "NodeJS is not installed, installing..."
+    install
+  else
+    current_version=$(node --version)
+    echo "NodeJS is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "NodeJS version mismatch, replacing installation..."
+      rm -rf $tools_folder/$nodejs_filename
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$nodejs_file
+  echo "Downloading NodeJS from $nodejs_url"
+  curl -L --output $downloads_folder/$nodejs_file $nodejs_url
+
+  rm -Rf $tools_folder/$nodejs_filename
+  tar -xf $downloads_folder/$nodejs_file -C $tools_folder
+
+  create_symlinks
+
+  rm -Rf $downloads_folder/$nodejs_file
+}
+
+create_symlinks() {
+  ./utils/symlink create_all "$tools_folder/$nodejs_filename/bin" $bin_folder
+}
+
+"$@"

@@ -1,0 +1,124 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  platform=$(./utils/assert requiredArg second "platform (linux or mac)" $2)
+  arch=$(./utils/assert requiredArg third "arch (amd64 or arm64)" $3)
+
+  source ./utils/globals
+
+  neovim_config_repo=$(./utils/assert requiredArg fourth "nvim config repository" $4)
+  neovim_platform=$(./utils/env select_platform $platform linux macos)
+  neovim_arch=$(./utils/env select_arch $arch x86_64 arm64)
+  neovim_filename=nvim-${neovim_platform}-${neovim_arch}
+  neovim_file=$neovim_filename.tar.gz
+  neovim_url=https://github.com/neovim/neovim/releases/download/$version/$neovim_file
+  neovim_bin=$(./utils/bin find nvim)
+  neovim_config_folder=${NEOVIM_CONFIG_PATH:-"$HOME/.config/nvim"}
+
+  # initializing directories
+  downloads_folder=$ds_downloads_folder
+  apps_folder=$ds_apps_folder
+  bin_folder=$ds_bin_folder
+
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Apps folder variable is required" $apps_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $downloads_folder
+  mkdir -p $apps_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking NeoVim installation..."
+
+  init $@
+
+  check_installation
+
+  check_config
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing NeoVim binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$neovim_bin" = "" ]; then
+    echo "NeoVim is not installed, installing..."
+    install
+  else
+    current_version=$(nvim --version | grep NVIM | sed "s|NVIM ||")
+    echo "NeoVim is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "NeoVim version mismatch, replacing installation..."
+      rm -rf $apps_folder/$neovim_filename
+      install
+    fi
+  fi
+}
+
+check_config() {
+  if [ ! -d $neovim_config_folder ]; then
+    clone_config
+    echo "No NeoVim config detected, cloning repo $neovim_config_repo into $neovim_config_folder"
+  else
+    neovim_config_repo_current=$(cd $neovim_config_folder && git remote show origin | grep "Fetch URL:" | sed "s|  Fetch URL: ||")
+    echo "NeoVim config already exists. [current=$neovim_config_repo_current; target=$neovim_config_repo]"
+
+    if [ "$neovim_config_repo_current" != "$neovim_config_repo" ]; then
+      echo "NeoVim repo mismatch, replacing configuration..."
+      clone_config
+    else
+      update_config_repo
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$neovim_file
+  echo "Downloading NeoVim from $neovim_url"
+  curl -L --output $downloads_folder/$neovim_file $neovim_url
+
+  rm -Rf $apps_folder/$neovim_filename
+  tar -xzf $downloads_folder/$neovim_file -C $apps_folder
+
+  create_symlinks
+
+  rm -Rf $downloads_folder/$neovim_file
+  reset
+}
+
+create_symlinks() {
+  ./utils/symlink create_all "$apps_folder/$neovim_filename/bin" $bin_folder
+}
+
+clone_config() {
+  echo "Cloning NeoVim configuration repository..."
+  rm -Rf $neovim_config_folder
+  git clone $neovim_config_repo $neovim_config_folder
+  reset
+}
+
+update_config_repo() {
+  echo "Pulling NeoVim configuration changes..."
+  sh -c "cd $neovim_config_folder && git pull"
+}
+
+reset() {
+  echo "Reseting NeoVim state..."
+  ./scripts/nvimreset
+}
+
+"$@"

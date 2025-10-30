@@ -1,0 +1,79 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  font_filename=$(./utils/assert requiredArg second "font file name" $2)
+
+  source ./utils/globals
+
+  font_namespace=${font_filename}NerdFont
+  font_variant=Regular
+  font_extension=ttf
+  font_file=${font_namespace}-${font_variant}.${font_extension}
+
+  nerdfont_filename=$font_filename
+  nerdfont_file=$nerdfont_filename.tar.xz
+  nerdfont_url=https://github.com/ryanoasis/nerd-fonts/releases/download/$version/$nerdfont_file
+
+  # initializing directories
+  downloads_folder=$ds_downloads_folder
+  fonts_folder=$ds_fonts_folder
+  installed_fonts_folder=$ds_installed_fonts_folder
+
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Fonts folder variable is required" $fonts_folder
+  ./utils/assert notEmpty "Installed fonts folder variable is required" $installed_fonts_folder
+
+  mkdir -p $downloads_folder
+  mkdir -p $fonts_folder
+  mkdir -p $installed_fonts_folder
+}
+
+run() {
+  echo "Checking Nerd Font installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+check_installation() {
+  if [ ! -f "$fonts_folder/nerdfonts/.nerdfont_version" ] || [ ! -d $fonts_folder/nerdfonts/$nerdfont_filename ]; then
+    echo "Nerd Font is not installed, installing..."
+    install
+  else
+    nerdfont_current=$(cat $fonts_folder/nerdfonts/.nerdfont_version)
+    echo "Nerd Font is already installed. [current=$nerdfont_current; target=$version]"
+    if [ "$version" != "$nerdfont_current" ]; then
+      echo "Nerd Font version mismatch, replacing installation..."
+      rm -rf $fonts_folder/nerdfonts
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$nerdfont_file
+  echo "Downloading Nerd Font from $nerdfont_url"
+  curl -L --output $downloads_folder/$nerdfont_file $nerdfont_url
+
+  rm -rf $fonts_folder/nerdfonts/$nerdfont_filename
+  mkdir -p $fonts_folder/nerdfonts/$nerdfont_filename
+  tar -xf $downloads_folder/$nerdfont_file -C $fonts_folder/nerdfonts/$nerdfont_filename
+
+  font_path="$fonts_folder/nerdfonts/$nerdfont_filename/$font_file"
+
+  [ ! -f $font_path ] && echo "File not found $font_path" && exit 1
+
+  mkdir -p $installed_fonts_folder
+  ln -sf $font_path $installed_fonts_folder/DevEnv.$font_extension
+  echo $version > $fonts_folder/nerdfonts/.nerdfont_version
+
+  rm -Rf $downloads_folder/$nerdfont_file
+}
+
+"$@"

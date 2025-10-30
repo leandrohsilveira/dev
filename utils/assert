@@ -1,0 +1,51 @@
+#!/bin/bash
+
+notEmpty() {
+  set -e
+
+  if [ "$2" = "" ]; then
+    echo $1 >&2
+    exit 1
+  fi
+}
+
+dirExists() {
+  set -e
+
+  if [ ! -d "$2" ]; then
+    echo $1 >&2
+    exit 1
+  fi
+}
+
+equals() {
+  set -e
+
+  if [ "$2" != "$3" ]; then 
+    echo $1 >&2 
+    exit 1
+  fi
+}
+
+notEquals() {
+  set -e
+
+  if [ "$2" = "$3" ]; then
+    echo $1 >&2
+    exit 1
+  fi
+}
+
+requiredArg() {
+  set -e
+
+  local position=$1
+  local name=$2
+  local value=$3
+
+  notEmpty "the $position argument, the $name, must not be empty" $value
+
+  echo $value
+}
+
+"$@"

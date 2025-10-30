@@ -1,0 +1,33 @@
+#!/bin/bash
+
+create() {
+  set -e
+
+  local source_path=$(./utils/assert requiredArg first "source path" $1)
+  local path=$(./utils/assert requiredArg second "symlink path" $2)
+
+  if [ ! -f "$path" ] && [ ! -d "$path" ]; then
+    echo "Creating symlink: [path=$path; source=$source_path]"
+    ln -s $source_path $path
+  else
+    echo "Symlink $path already exists, skipping..."
+  fi
+}
+
+create_all() {
+  set -e
+
+  local source_path=$(./utils/assert requiredArg first "source folder" $1)
+  local target_path=$(./utils/assert requiredArg second "symlink folder path" $2)
+
+  ./utils/assert dirExists "$source_path directory must exist" $source_path
+
+
+  for dir in $source_path/*; do
+    local symlink_file=$(basename $dir)
+    local symlink_path="$target_path/$symlink_file"
+    create $dir $symlink_path
+  done
+}
+
+"$@"

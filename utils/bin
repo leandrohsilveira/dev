@@ -1,0 +1,12 @@
+#!/bin/bash
+
+find() {
+  set -e
+  bin=$(./utils/assert requiredArg first executable $1)
+
+  set +e
+  which $bin
+  set -e
+}
+
+"$@"

@@ -1,0 +1,86 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  platform=$(./utils/assert requiredArg second "platform (linux or mac)" $2)
+  arch=$(./utils/assert requiredArg third "arch (amd64 or arm64)" $3)
+
+  source ./utils/globals
+
+  go_platform=$(./utils/env select_platform $platform linux darwin)
+  go_arch=$(./utils/env select_arch $arch amd64 arm64)
+
+  go_filename=go${version}.${go_platform}-${go_arch}
+  go_file=$go_filename.tar.gz
+  go_url=https://go.dev/dl/$go_file
+  go_bin=$(./utils/bin find go)
+
+  # initializing directories
+  downloads_folder=$ds_downloads_folder
+  tools_folder=$ds_tools_folder
+  bin_folder=$ds_bin_folder
+
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Tools folder variable is required" $tools_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $downloads_folder
+  mkdir -p $tools_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking GoLang installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing GoLang binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$go_bin" = "" ]; then
+    echo "GoLang is not installed, installing..."
+    install
+  else
+    current_version=$(go version | sed -r 's/^go version go([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+    echo "GoLang is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "GoLang version mismatch, replacing installation..."
+      bash -c "cd $sources_folder/$go_filename && make uninstall"
+      rm -rf $tools_folder/go
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$go_file
+  echo "Downloading GoLang from $go_url"
+  curl -L --output $downloads_folder/$go_file $go_url
+
+  rm -Rf $tools_folder/go
+  tar -xzf $downloads_folder/$go_file -C $tools_folder
+
+  create_symlinks
+  rm -Rf $downloads_folder/$go_file
+}
+
+create_symlinks() {
+  ./utils/symlink create_all "$tools_folder/go/bin" $bin_folder
+}
+
+"$@"

@@ -1,0 +1,44 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  source ./utils/globals
+
+  # initializing directories
+  scripts_folder=$ds_scripts_folder
+  bin_folder=$ds_bin_folder
+
+  ./utils/assert notEmpty "Scripts folder variable is required" $scripts_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+}
+
+run() {
+  echo "Checking DevScripts symlinks..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing DevScripts symlinks..."
+
+  init $@
+
+  install
+
+  echo ""
+}
+
+check_installation() {
+  install
+}
+
+install() {
+  ./utils/symlink create_all $scripts_folder $bin_folder
+}
+
+"$@"

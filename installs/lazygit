@@ -1,0 +1,85 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  platform=$(./utils/assert requiredArg second "platform (linux or mac)" $2)
+  arch=$(./utils/assert requiredArg third "arch (amd64 or arm64)" $3)
+
+  source ./utils/globals
+
+  lazygit_platform=$(./utils/env select_platform $platform linux darwin)
+  lazygit_arch=$(./utils/env select_arch $arch x86_64 arm64)
+  lazygit_filename=lazygit_${version}_${lazygit_platform}_${lazygit_arch}
+  lazygit_file=$lazygit_filename.tar.gz
+  lazygit_url=https://github.com/jesseduffield/lazygit/releases/download/v$version/$lazygit_file
+  lazygit_bin=$(./utils/bin find lazygit)
+
+  # initializing directories
+  downloads_folder=$ds_downloads_folder
+  tools_folder=$ds_tools_folder
+  bin_folder=$ds_bin_folder
+
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Tools folder variable is required" $tools_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $downloads_folder
+  mkdir -p $tools_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking LazyGit installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing LazyGit binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$lazygit_bin" = "" ]; then
+    echo "LazyGit is not installed, installing..."
+    install
+  else
+    current_version=$(lazygit --version | sed "s|.*, version=||" | sed "s|, os=.*||")
+    echo "LazyGit is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "LazyGit version mismatch, replacing installation..."
+      rm -rf $tools_folder/lazygit
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$lazygit_file
+  echo "Downloading LazyGit from $lazygit_url"
+  curl -L --output $downloads_folder/$lazygit_file $lazygit_url
+
+  rm -Rf $tools_folder/$lazygit_filename
+  mkdir -p $tools_folder/lazygit
+  tar -xf $downloads_folder/$lazygit_file -C $tools_folder/lazygit
+  
+  create_symlinks
+  rm -Rf $downloads_folder/$lazygit_file
+}
+
+create_symlinks() {
+  ./utils/symlink create "$tools_folder/lazygit/lazygit" "$bin_folder/lazygit"
+}
+
+"$@"

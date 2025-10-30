@@ -1,0 +1,88 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+
+  source ./utils/globals
+
+  luarocks_filename=luarocks-${version}
+  luarocks_file=$luarocks_filename.tar.gz
+  luarocks_url=https://luarocks.github.io/luarocks/releases/$luarocks_file
+
+  # initializing directories
+  sources_folder=$ds_sources_folder
+  downloads_folder=$ds_downloads_folder
+  tools_folder=$ds_tools_folder
+  bin_folder=$ds_bin_folder
+  luarocks_bin=$(./utils/bin find luarocks)
+
+  ./utils/assert notEmpty "Sources folder variable is required" $sources_folder
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Tools folder variable is required" $tools_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $sources_folder
+  mkdir -p $downloads_folder
+  mkdir -p $tools_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking Lua Rocks! installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing LuaRocks! binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$luarocks_bin" = "" ]; then
+    echo "Lua Rocks! is not installed, installing..."
+    install
+  else
+    current_version=$(luarocks --version | grep $luarocks_bin | sed "s|$luarocks_bin ||")
+    echo "Lua Rocks! is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "Lua Rocks! version mismatch, replacing installation..."
+      bash -c "cd $sources_folder/$luarocks_filename && make uninstall"
+      rm -rf $tools_folder/luarocks
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$luarocks_file
+  echo "Downloading LuaRocks! from $luarocks_url"
+  curl -L --output $downloads_folder/$luarocks_file $luarocks_url
+
+  rm -Rf $sources_folder/$luarocks_filename
+  tar -xzf $downloads_folder/$luarocks_file -C $sources_folder
+
+  mkdir -p $tools_folder/luarocks
+  bash -c "cd $sources_folder/$luarocks_filename && ./configure --prefix=$tools_folder/luarocks --with-lua=$tools_folder/lua && make && make install"
+
+  create_symlinks
+
+  rm -Rf $downloads_folder/$luarocks_file
+}
+
+create_symlinks() {
+  ./utils/symlink create_all "$tools_folder/luarocks/bin" $bin_folder
+}
+
+"$@"

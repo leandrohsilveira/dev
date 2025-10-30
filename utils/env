@@ -1,0 +1,37 @@
+#!/bin/bash
+
+select_platform() {
+  set -e
+
+  platform=$1
+  ./utils/assert notEmpty "the first argument, the platform (linux or mac), is required." $platform
+  if_linux=$2
+  ./utils/assert notEmpty "the second argument, the value if on linux platform, is required." $if_linux
+  if_mac=$3
+  ./utils/assert notEmpty "the third argument, the value if on mac platform, is required." $if_mac
+
+  [ "$platform" = "linux" ] && echo $if_linux && exit 0
+  [ "$platform" = "mac" ] && echo $if_mac && exit 0
+
+  echo "the first argument, the platform, must have one of the following values: linux, mac." >&2
+  exit 1
+}
+
+select_arch() {
+  set -e
+
+  arch=$1
+  ./utils/assert notEmpty "the first argument, the arch (amd64 or arm64), is required." $arch
+  if_amd64=$2
+  ./utils/assert notEmpty "the second argument, the value if on amd64 arch, is required." $if_amd64
+  if_arm64=$3
+  ./utils/assert notEmpty "the third argument, the value if on arm64 arch, is required." $if_arm64
+
+  [ "$arch" = "amd64" ] && echo $if_amd64 && exit 0
+  [ "$arch" = "arm64" ] && echo $if_arm64 && exit 0
+
+  echo "the first argument, the arch, must have one of the following values: amd64, arm64." >&2
+  exit 1
+}
+
+"$@"

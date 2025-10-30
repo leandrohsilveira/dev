@@ -1,0 +1,89 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  platform=$(./utils/assert requiredArg second "platform (linux or mac)" $2)
+
+  source ./utils/globals
+
+  lua_platform=$(./utils/env select_platform $platform linux macosx)
+  lua_filename=lua-${version}
+  lua_file=$lua_filename.tar.gz
+  lua_url=https://www.lua.org/ftp/$lua_file
+  lua_bin=$(./utils/bin find lua)
+
+  # initializing directories
+  sources_folder=$ds_sources_folder
+  downloads_folder=$ds_downloads_folder
+  tools_folder=$ds_tools_folder
+  bin_folder=$ds_bin_folder
+
+  ./utils/assert notEmpty "Sources folder variable is required" $sources_folder
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Tools folder variable is required" $tools_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $sources_folder
+  mkdir -p $downloads_folder
+  mkdir -p $tools_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking Lua installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing Lua binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$lua_bin" = "" ]; then
+    echo "Lua is not installed, installing..."
+    install
+  else
+    current_version=$(lua -v 2>&1 | sed "s|Lua ||" | sed "s| Copyright.*||g" | sed "s| ||g")
+    echo "Lua is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "Lua version mismatch, replacing installation..."
+      rm -r $tools_folder/lua $bin_folder/lua
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$lua_file
+
+  echo "Downloading Lua from $lua_url"
+  curl -L --output $downloads_folder/$lua_file $lua_url
+
+  rm -Rf $sources_folder/$lua_filename
+  tar -xzf $downloads_folder/$lua_file -C $sources_folder
+
+  bash -c "cd $sources_folder/$lua_filename && make $lua_platform all test install INSTALL_TOP=$tools_folder/lua"
+  
+  create_symlinks
+
+  rm -Rf $downloads_folder/$lua_file
+}
+
+create_symlinks() {
+  ./utils/symlink create_all "$tools_folder/lua/bin" $bin_folder
+}
+
+"$@"
