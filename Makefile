@@ -9,13 +9,14 @@ ZELLIJ_VERSION ?= 0.43.1
 NEOVIM_VERSION ?= v0.11.4
 NERDFONT_VERSION ?= v3.4.0
 GOLANG_VERSION ?= 1.25.3
+RIPGREP_VERSION ?= 15.1.0
 
 NEOVIM_CONFIG_REPO ?= git@github.com:leandrohsilveira/nvim-config.git
 FONT_FILENAME ?= FiraCode
 
 install: configs_sync devscripts zellij neovim
 
-sync: configs_sync devscripts_sync lua_sync luarocks_sync lazygit_sync zellij_sync neovim_sync nodejs_sync
+sync: configs_sync devscripts_sync lua_sync luarocks_sync lazygit_sync zellij_sync ripgrep_sync neovim_sync nodejs_sync
 
 lua:
 	@sh -c "./installs/lua run $(LUA_VERSION) $(PLATFORM)"
@@ -49,7 +50,13 @@ zellij: nerdfont
 zellij_sync:
 	@sh -c "./installs/zellij sync $(ZELLIJ_VERSION) $(PLATFORM) $(ARCH)"
 
-neovim: luarocks lazygit nodejs
+ripgrep:
+	@sh -c "./installs/ripgrep run $(RIPGREP_VERSION) $(PLATFORM) $(ARCH)"
+
+ripgrep_sync:
+	@sh -c "./installs/ripgrep sync $(RIPGREP_VERSION) $(PLATFORM) $(ARCH)"
+
+neovim: luarocks lazygit nodejs ripgrep
 	@sh -c "./installs/neovim run $(NEOVIM_VERSION) $(PLATFORM) $(ARCH) $(NEOVIM_CONFIG_REPO)"
 
 neovim_sync:

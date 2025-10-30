@@ -1,0 +1,85 @@
+#!/bin/bash
+
+init() {
+  set -e
+
+  version=$(./utils/assert requiredArg first "version" $1)
+  platform=$(./utils/assert requiredArg second "platform (linux or mac)" $2)
+  arch=$(./utils/assert requiredArg third "arch (amd64 or arm64)" $3)
+
+  source ./utils/globals
+
+  ripgrep_platform=$(./utils/env select_platform $platform unknown-linux-musl apple-darwin)
+  ripgrep_arch=$(./utils/env select_arch $arch x86_64 aarch64)
+  ripgrep_filename=ripgrep-${version}-${ripgrep_arch}-${ripgrep_platform}
+  ripgrep_file=$ripgrep_filename.tar.gz
+  ripgrep_url=https://github.com/BurntSushi/ripgrep/releases/download/$version/$ripgrep_file
+  ripgrep_bin=$(./utils/bin find rg)
+
+  # initializing directories
+  downloads_folder=$ds_downloads_folder
+  tools_folder=$ds_tools_folder
+  bin_folder=$ds_bin_folder
+
+  ./utils/assert notEmpty "Downloads folder variable is required" $downloads_folder
+  ./utils/assert notEmpty "Tools folder variable is required" $tools_folder
+  ./utils/assert notEmpty "Bin folder variable is required" $bin_folder
+
+  mkdir -p $downloads_folder
+  mkdir -p $tools_folder
+  mkdir -p $bin_folder
+}
+
+run() {
+  echo "Checking RipGrep installation..."
+
+  init $@
+
+  check_installation
+
+  echo ""
+}
+
+sync() {
+  echo "Syncing RipGrep binaries..."
+
+  init $@
+
+  create_symlinks
+
+  echo ""
+}
+
+check_installation() {
+  if [ "$ripgrep_bin" = "" ]; then
+    echo "RipGrep is not installed, installing..."
+    install
+  else
+    current_version=$(rg --version | grep ripgrep | sed -r "s|^ripgrep ([0-9]+\.[0-9]+\.[0-9]+).*|\1|")
+    echo "RipGrep is already installed. [current=$current_version; target=$version]"
+    if [ "$version" != "$current_version" ]; then
+      echo "RipGrep version mismatch, replacing installation..."
+      rm -rf $tools_folder/ripgrep
+      install
+    fi
+  fi
+}
+
+install() {
+  rm -Rf $downloads_folder/$ripgrep_file
+  echo "Downloading RipGrep from $ripgrep_url"
+  curl -L --output $downloads_folder/$ripgrep_file $ripgrep_url
+
+  mkdir -p $tools_folder
+  tar -xzf $downloads_folder/$ripgrep_file -C $tools_folder
+
+  create_symlinks
+
+  rm -Rf $downloads_folder/$ripgrep_file
+}
+
+create_symlinks() {
+  ./utils/symlink create "$tools_folder/$ripgrep_filename/rg" "$bin_folder/rg"
+}
+
+"$@"
