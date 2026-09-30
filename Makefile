@@ -3,14 +3,14 @@ ARCH ?= amd64
 
 LUA_VERSION ?= 5.1.5
 LUAROCKS_VERSION ?= 3.12.2
-LAZYGIT_VERSION ?= 0.55.1
-NODEJS_VERSION ?= v22.20.0
-ZELLIJ_VERSION ?= 0.43.1
-NEOVIM_VERSION ?= v0.11.4
+LAZYGIT_VERSION ?= 0.65.1
+NODEJS_VERSION ?= v24.21.0
+ZELLIJ_VERSION ?= 0.45.1
+NEOVIM_VERSION ?= v0.12.5
 NERDFONT_VERSION ?= v3.4.0
 GOLANG_VERSION ?= 1.25.3
-RIPGREP_VERSION ?= 15.1.0
-FD_VERSION ?= 10.3.0
+RIPGREP_VERSION ?= 15.2.0
+FD_VERSION ?= 10.5.0
 
 NEOVIM_CONFIG_REPO ?= git@github.com:leandrohsilveira/nvim-config.git
 FONT_FILENAME ?= FiraCode
@@ -86,6 +86,9 @@ golang_sync:
 
 ohmyzsh:
 	@sh -c "./installs/ohmyzsh run"
+
+opencode: nodejs
+	@sh -c "npm i -g opencode-ai"
 
 configs_sync:
 	@sh -c "./configs.sh"
